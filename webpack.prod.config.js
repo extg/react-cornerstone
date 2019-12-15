@@ -13,6 +13,11 @@ module.exports = {
     filename: 'bundle.js',
     publicPath: '/public/'
   },
+  node: { fs: 'empty' },
+  // externals: {
+  //   jquery: 'jQuery'
+  // },
+  //
 
   plugins: [
     new webpack.optimize.DedupePlugin(),

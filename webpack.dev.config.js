@@ -14,7 +14,7 @@ module.exports = {
     filename: 'bundle.js',
     publicPath: '/public/'
   },
-
+  node: { fs: 'empty' },
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NoErrorsPlugin()
@@ -33,6 +33,7 @@ module.exports = {
         loader: 'file' },
       { test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9]+)?$/,
         loader: 'file'}
-    ]
+    ],
+    noParse: [/jszip.js$/],
   }
 }
