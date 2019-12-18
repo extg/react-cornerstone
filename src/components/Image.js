@@ -243,76 +243,149 @@ export default class Image extends React.Component {
 
 
 }
-/**
-* Created by nico on 16/12/2015.
-*/
-var ACM = function(){
 
-    function ACM( params ){
+let ACM = function () {
 
+    function ACM(params) {
         this.img = params.img;
+        console.log(this.img);
         this.margin = params.margin || 4;
         this.maxIteration = params.maxIteration || 250;
-        this.minlen = params.minlen || Math.pow( .1, 2 );
-        this.maxlen = params.maxlen || Math.pow( 5, 2 );
+        this.minlen = params.minlen || Math.pow(.1, 2);
+        this.maxlen = params.maxlen || Math.pow(5, 2);
+        // this.this = params.globalScope || this;
         var threshold = params.threshold || .1;
 
-        this.canvas = document.createElement("canvas");
-        document.body.appendChild( this.canvas );
+        this.startX = params.startX || 0;
+        this.startY = params.startY || 0;
+        this.imageData = params.imageData || null;
+        // this.canvas = document.createElement("canvas");
+        // this.canvas = document.getElementsByName("cornerstone-canvas");
+        // document.body.appendChild(this.canvas);
+        let sourceCanv = document.getElementsByClassName("cornerstone-canvas")[0];
+        this.canvas = sourceCanv;
 
-        this.w = this.canvas.width  = this.img.width;
+
+        // console.log(this.canvas);
+
+        this.w = this.canvas.width = this.img.width;
         this.h = this.canvas.height = this.img.height;
 
         this.ctx = this.canvas.getContext("2d");
-        this.ctx.drawImage(this.img, 0, 0);
+        // this.ctx.drawImage(this.img, this.startX, 0);
+
+        // Draws a black square
         this.ctx.strokeStyle = "#000";
         this.ctx.lineWidth = this.margin;
-        this.ctx.strokeRect(0, 0, this.w, this.h);
+        this.ctx.strokeRect(this.startX, 0, this.w, this.h);
 
-        var gradientFlow = this.ctx.getImageData(0, 0, this.w, this.h);
-        var result = ChamferDistance.compute(ChamferDistance.chamfer13, gradientFlow, threshold, this.w, this.h);
-        this.ctx.putImageData( gradientFlow,0,0 );
+
+        this.adaptGrayScale();
+
+
+        console.log(sourceCanv.getContext("2d"));
+
+        // var gradientFlow = this.img.data.byteArray;
+        // var gradientFlow = sourceCanv.getContext("2d").getImageData(this.startX, 0, this.w, this.h).data;
+        // var gradientFlow = this.img.data.byteArray;
+
+        // cornerstone.enable(this.canvas);
+        // console.log(cornerstone.getPixels(this.canvas, true));
+
+
+
+
+        var gradientFlow = this.imageData;
+        // var gradientFlow =  this.img.data.byteArray;
+
+        var result = ChamferDistance.compute(ChamferDistance.chamfer13, gradientFlow , threshold, this.img.width,  this.img.height, this.ctx);
+        console.log(gradientFlow);
+        console.log(result);
+
+
+        /*
+            To put Gradient Flow on this particular img's canvas instance
+        */
+        // let imageData = this.ctx.createImageData(gradientFlow);
+        // this.ctx.putImageData( imageData,0,0 );
 
         this.flowX = result[0];
         this.flowY = result[1];
 
         //binding the scope for animationFrameRequests
         this.update = this.update.bind(this);
-
+        // this.update = this.update.
+        this.setSnakeDots = this.setSnakeDots.bind(this);
     }
 
-    function compute( _onComplete ) {
-        this.onComplete = _onComplete;
+
+    function adaptGrayScale(){
+        var scope = this;
+        this.imageData = Array.from(Object.values(this.imageData));
+        for (let i =0; i< this.imageData.length; i++){
+            this.imageData[i] = (this.imageData[i] + 2048) / 4096 * 256;
+        }
+        // this.imageData.forEach(function (p) {
+        //
+        //     p = (p + 2048) /4096 * 256;
+        //
+        // });
+        return this.imageData;
+    }
+
+    function setSnakeDots(data ) {
         this.snake = [];
-        var count = 20;
-        var r = Math.max(this.w, this.h);
-        for (var i = 0; i < count; i++) {
-            var a = Math.PI * 2 / count * i;
+        for (var i = 0; i < data.length; i++) {
             var p = [
-                Math.max(this.margin, Math.min(this.w - this.margin, ~~( this.w / 2 + Math.cos(a) * r ))),
-                Math.max(this.margin, Math.min(this.h - this.margin, ~~( this.h / 2 + Math.sin(a) * r )))
+                data[i][0],
+                data[i][1]
             ];
             this.snake.push(p);
         }
+        // this.it = 0;
+        // this.length = 0;
+        // this.last = this.getsnakelength();
+        // cancelAnimationFrame(this.interval);
+        // this.update();
+        // this.renderAlgo();
+    }
+
+
+    function compute(_onComplete) {
+        this.onComplete = _onComplete;
+        // this.snake = [];
+        // // set starting dots number for a snake
+        // //def = 20
+        // var count = 100;
+        // var r = Math.max(this.w, this.h);
+        // for (var i = 0; i < count; i++) {
+        //     var a = Math.PI * 2 / count * i;
+        //     var p = [
+        //         Math.max(this.margin, Math.min(this.w - this.margin, ~~(this.w / 2 + Math.cos(a) * r))),
+        //         Math.max(this.margin, Math.min(this.h - this.margin, ~~(this.h / 2 + Math.sin(a) * r)))
+        //     ];
+        //     // console.log("P ", i, ": ", p);
+        //     this.snake.push(p);
+        // }
         this.it = 0;
         this.length = 0;
         this.last = this.getsnakelength();
         cancelAnimationFrame(this.interval);
         this.update();
-        this.render();
+        this.renderAlgo();
     }
 
     function update() {
 
         this.loop();
-        this.render();
+        this.renderAlgo();
         this.length = this.getsnakelength();
         if (++this.it >= this.maxIteration) {
-            console.log("points:", this.snake.length, 'iteration:', this.it);
+            // console.log("points:", this.snake.length, 'iteration:', this.it);
             cancelAnimationFrame(this.interval);
-            this.render(true);
-            if( this.onComplete ){
-                this.onComplete( this.snake );
+            this.renderAlgo(true);
+            if (this.onComplete) {
+                this.onComplete(this.snake);
             }
         } else {
             this.interval = requestAnimationFrame(this.update);
@@ -323,34 +396,50 @@ var ACM = function(){
     function loop() {
 
         var scope = this;
-        this.snake.forEach(function (p) {
-            if (p[0] <= 0 || p[0] >= scope.w - 1 || p[1] <= 0 || p[1] >= scope.h - 1)return;
-            var vx = (.5 - scope.flowX[~~( p[0])][~~( p[1] )] ) * 2;
-            var vy = (.5 - scope.flowY[~~( p[0])][~~( p[1] )] ) * 2;
+
+        for (let i=0; i < this.snake.length; i++ ){
+            console.log(this.snake.length);
+            let p = [this.snake[i][0],this.snake[i][1]];
+            if (p[0] <= 0 || p[0] >= this.w - 1 || p[1] <= 0 || p[1] >= this.h - 1) return;
+            var vx = (.5 - this.flowX[~~(p[0])][~~(p[1])]) * 2.;
+            var vy = (.5 - this.flowY[~~(p[0])][~~(p[1])]) * 2.;
             p[0] += vx * 100;
             p[1] += vy * 100;
-        });
+            this.snake[i] = p
+            // console.log("loop ", p);
+        }
+
+
+
+        // this.snake.forEach(function (p) {
+        //     if (p[0] <= 0 || p[0] >= scope.w - 1 || p[1] <= 0 || p[1] >= scope.h - 1) return;
+        //     var vx = (.5 - scope.flowX[~~(p[0])][~~(p[1])]) * 2;
+        //     var vy = (.5 - scope.flowY[~~(p[0])][~~(p[1])]) * 2;
+        //     p[0] += vx * 100;
+        //     p[1] += vy * 100;
+        //     console.log("loop ", p);
+        // });
 
         //add / remove
         // this.snake.forEach(function (cur, i, snake) {
         var tmp = [];
-        for( var i = 0; i < this.snake.length; i++ ){
+        for (var i = 0; i < this.snake.length; i++) {
 
             var prev = this.snake[(i - 1 < 0 ? this.snake.length - 1 : (i - 1))];
             var cur = this.snake[i];
             var next = this.snake[(i + 1) % this.snake.length];
-
+            // console.log(next);
             var dist = distance(prev, cur) + distance(cur, next);
 
             //if the length is too short, don't use this point anymore
-            if (dist > this.minlen){
+            if (dist > this.minlen) {
 
                 //if it is below the max length
                 if (dist < this.maxlen) {
                     //store the point
                     tmp.push(cur);
 
-                }else{
+                } else {
                     //otherwise split the previous and the next edges
                     var pp = [lerp(.5, prev[0], cur[0]), lerp(.5, prev[1], cur[1])];
                     var np = [lerp(.5, cur[0], next[0]), lerp(.5, cur[1], next[1])];
@@ -364,16 +453,33 @@ var ACM = function(){
         return this.snake;
     }
 
-    function render(finished) {
 
-        this.ctx.clearRect(0, 0, this.w, this.h);
-        this.ctx.drawImage(this.img, 0, 0, this.w, this.h);
+    function renderAlgo(finished) {
+
+        // this.ctx.clearRect(this.startX, 0, this.w, this.h);
+
+        // console.log(this.img);
+        // this.ctx.drawImage(this.img, this.startX, 0, this.w, this.h);
+
+        // const canvas = document.getElementsByClassName('cornerstone-canvas')[0];
+        // try {
+        //
+        //     cornerstone.enable(canvas);
+        //     cornerstone.updateImage(canvas, true);
+        //
+        // } catch (error){
+        //     cornerstone.updateImage(canvas, true);
+        // }
+
         this.ctx.lineWidth = 1;
-        this.ctx.strokeStyle = "#fff";
-        this.ctx.fillStyle = Boolean(finished) ? "rgba( 255,0,0, .5 )" : "rgba(255,255,255,.5 )";
+        this.ctx.strokeStyle = "#85e2ff";
+        // this.ctx.fillStyle = Boolean(finished) ? "rgba( 255,0,0, .5 )" : "rgba(255,255,255,.5 )";
+        // if (finished){
+        this.ctx.fillStyle = Boolean(finished) ? "rgba( 255,0,0, .5 )" : "rgba(133,226,255,0.5)";
         this.ctx.beginPath();
         var scope = this;
         this.snake.forEach(function (p) {
+            // console.log(p[0], ' ', p[1]);
             scope.ctx.lineTo(p[0], p[1]);
         });
         this.ctx.closePath();
@@ -382,8 +488,11 @@ var ACM = function(){
 
         this.ctx.fillStyle = "#FFF";
         this.ctx.font = "10px Verdana";
-        this.ctx.fillText("iteration: " + this.it + " / " + this.maxIteration + ' length: ' + this.last.toFixed(2), 10, 10);
+        // }
 
+        // this.ctx.fillText("iteration: " + this.it + " / " + this.maxIteration + ' length: ' + this.last.toFixed(2), 10, 10);
+
+        //TODO: return final snakePoints this.snake
     }
 
 
@@ -398,13 +507,15 @@ var ACM = function(){
         return length;
     }
 
-    function distance( a, b) {
+    function distance(a, b) {
         var dx = a[0] - b[0];
         var dy = a[1] - b[1];
         return dx * dx + dy * dy;
+        // return Math.sqrt(dx * dx + dy * dy);
     }
+
     function lerp(t, a, b) {
-        return a + t * ( b - a );
+        return a + t * (b - a);
     }
 
     var p = ACM.prototype;
@@ -412,68 +523,89 @@ var ACM = function(){
     p.compute = compute;
     p.update = update;
     p.loop = loop;
-    p.render = render;
+    p.renderAlgo = renderAlgo;
     p.getsnakelength = getsnakelength;
+    p.setSnakeDots = setSnakeDots;
+    p.adaptGrayScale = adaptGrayScale;
+    console.log("ACM ",ACM);
     return ACM;
+    // }
 }({});
 
 
+
 /**
-* Chamfer distance
+* Chamfer distance, helper functions to compute edges data and move among gradient
 * @author Code by Xavier Philippeau
 * Kernels by Verwer, Borgefors and Thiel
 */
-var ChamferDistance = function (chamfer) {
+let ChamferDistance = function (chamfer) {
 
     chamfer.cheessboard = [[1, 0, 1], [1, 1, 1]];
+    // chamfer.cheessboard = [[1, 0, 1], [1, 0, 1]];
     chamfer.chamfer3 = [[1, 0, 3], [1, 1, 4]];
     chamfer.chamfer5 = [[1, 0, 5], [1, 1, 7], [2, 1, 1]];
     chamfer.chamfer7 = [[1, 0, 14], [1, 1, 20], [2, 1, 31], [3, 1, 44]];
     chamfer.chamfer13 = [[1, 0, 68], [1, 1, 96], [2, 1, 152], [3, 1, 215], [3, 2, 245], [4, 1, 280], [4, 3, 340], [5, 1, 346], [6, 1, 413]];
     chamfer.chamfer = null;
 
-    chamfer.init2DArray = function(w, h) {
-        var arr = [];
-        for (var x = 0; x < w; x++) {
+    chamfer.init2DArray = function (w, h) {
+        const arr = [];
+        for (let x = 0; x < w; x++) {
             arr.push(new Float32Array(h));
         }
         return arr;
     };
 
-    function testAndSet(output, x, y,w,h, newvalue) {
+    function testAndSet(output, x, y, w, h, newvalue) {
         if (x < 0 || x >= w) return;
         if (y < 0 || y >= h) return;
-        var v = output[x][y];
+        const v = output[x][y];
         if (v >= 0 && v < newvalue) return;
         output[x][y] = newvalue;
     }
 
-    chamfer.compute = function (chamfermask, imageData, threshold, w, h) {
+    chamfer.compute = function (chamfermask, imageData, threshold, w, h, ctx) {
 
         chamfer.chamfer = chamfermask || chamfer.chamfer13;
+        w = w -1;
+        h = h-1;
+        const gradient = chamfer.init2DArray(w, h);
+        const flowX = chamfer.init2DArray(w, h);
+        const flowY = chamfer.init2DArray(w, h);
+        // const data = imageData.data;
+        const data = imageData;
 
-        var gradient = chamfer.init2DArray(w, h);
-        var flowX = chamfer.init2DArray(w, h);
-        var flowY = chamfer.init2DArray(w, h);
-        var data = imageData.data;
+
+
         // initialize distance
         for (var y = 0; y < h; y++) {
             for (var x = 0; x < w; x++) {
-                var id = ( y * w + x ) * 4;
-                var luma = 0.212 * ( data[id] / 0xFF ) + 0.7152 * ( data[id + 1] / 0xFF ) + 0.0722 * ( data[id + 2] / 0xFF );
-                if (luma <= threshold ) {
+                var id = (y * w + x) ;
+                if (id == data.length) continue;
+                // const luma = 0.212 * (data[id] / 0xFF) + 0.7152 * (data[id + 1] / 0xFF) + 0.0722 * (data[id + 2] / 0xFF);
+                const luma = data[id]/0xFF;
+
+                // if (isNaN(luma)){
+                //
+                //     console.log(luma, ' y:', y, ' x:', x, ' id:', id, ' data[id], ',data[id]);
+                // }
+
+                if (luma <= threshold) {
                     gradient[x][y] = -1;
-                    data[id] = data[id + 1] = data[id + 2] = 0;
-                }else{
-                    data[id]=data[id+1]=data[id+2]=0xFF;
+                    // data[id] = data[id + 1] = data[id + 2] = 0;
+                    data[id] = 0;
+                } else {
+                    // data[id] = data[id + 1] = data[id + 2] = 0xFF;
+                    data[id] = 0xFF;
                 }
 
             }
         }
 
         //normalization value
-        var max = 0;
-        var min = 1e10;
+        let max = 0;
+        let min = 1e10;
         //forward pass
         for (y = 0; y < h; y++) {
             for (x = 0; x < w; x++) {
@@ -485,14 +617,14 @@ var ChamferDistance = function (chamfer) {
                     var dy = chamfer.chamfer[k][1];
                     var dt = chamfer.chamfer[k][2];
 
-                    testAndSet(gradient, x + dx, y + dy,w,h, v + dt);
+                    testAndSet(gradient, x + dx, y + dy, w, h, v + dt);
                     if (dy != 0) {
-                        testAndSet(gradient, x - dx, y + dy,w,h,v + dt);
+                        testAndSet(gradient, x - dx, y + dy, w, h, v + dt);
                     }
                     if (dx != dy) {
-                        testAndSet(gradient, x + dy, y + dx,w,h, v + dt);
+                        testAndSet(gradient, x + dy, y + dx, w, h, v + dt);
                         if (dy != 0) {
-                            testAndSet(gradient, x - dy, y + dx,w,h, v + dt);
+                            testAndSet(gradient, x - dy, y + dx, w, h, v + dt);
                         }
                     }
                     min = Math.min(min, gradient[x][y]);
@@ -510,14 +642,14 @@ var ChamferDistance = function (chamfer) {
                     dx = chamfer.chamfer[k][0];
                     dy = chamfer.chamfer[k][1];
                     dt = chamfer.chamfer[k][2];
-                    testAndSet(gradient, x - dx, y - dy,w,h, v + dt);
+                    testAndSet(gradient, x - dx, y - dy, w, h, v + dt);
                     if (dy != 0) {
-                        testAndSet(gradient, x + dx, y - dy,w,h, v + dt);
+                        testAndSet(gradient, x + dx, y - dy, w, h, v + dt);
                     }
                     if (dx != dy) {
-                        testAndSet(gradient, x - dy, y - dx,w,h, v + dt);
+                        testAndSet(gradient, x - dy, y - dx, w, h, v + dt);
                         if (dy != 0) {
-                            testAndSet(gradient, x + dy, y - dx,w,h, v + dt);
+                            testAndSet(gradient, x + dy, y - dx, w, h, v + dt);
                         }
                     }
                 }
@@ -533,33 +665,49 @@ var ChamferDistance = function (chamfer) {
                     flowX[x][y] = flowY[x][y] = 0;
                     continue;
                 }
-                dx = ( gradient[x + 1][y] - gradient[x - 1][y] ) * .5 + max * .5;
-                dy = ( gradient[x][y + 1] - gradient[x][y - 1] ) * .5 + max * .5;
+                dx = (gradient[x + 1][y] - gradient[x - 1][y]) * .5 + max * .5;
+                dy = (gradient[x][y + 1] - gradient[x][y - 1]) * .5 + max * .5;
                 flowX[x][y] = dx / max;
                 flowY[x][y] = dy / max;
 
+                if (flowX[x][y] == NaN ){
+                    console.log(flowX[x][y], ' ', max);
+                }
+                // console.log(flowX[x][y], ' ', max);
+
                 //render values to imageData
-                id = ( y * w + x ) * 4;
-                data[id] = data[id+1] = data[id+2] = 0xFF - map( gradient[x][y],min,max/2, 0,0xFF );
-                data[id+3] = 0xFF;
+                // id = (y * w + x)  *4;
+                id = (y * w + x)  ;
+                // data[id] = data[id + 1] = data[id + 2] = 0xFF - map(gradient[x][y], min, max / 2, 0, 0xFF);
+                data[id] = 0xFF - map(gradient[x][y], min, max / 2, 0, 0xFF);
+                // data[id + 3] = 0xFF;
             }
         }
+        // console.log(data);
+        // var newImgData=ctx.createImageData(data, 0, 0, w, h);
+        // ctx.putImageData(data,0,0);
+
+        //We dont want to draw Gradient, so comment
         imageData.data = data;
 
         return [flowX, flowY];
     };
 
     function lerp(t, a, b) {
-        return a + t * ( b - a );
+        return a + t * (b - a);
     }
+
     function norm(t, a, b) {
-        return ( t - a ) / ( b - a );
+        return (t - a) / (b - a);
     }
+
     function map(t, a0, b0, a1, b1) {
         return lerp(norm(t, a0, b0), a1, b1);
     }
+
     return chamfer;
 }({});
+
 
 
 
